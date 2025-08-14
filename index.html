@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assessment Helper Chatbot</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+          sans-serif;
+        background-color: #f8fafc;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        gap: 20px;
+      }
+
+      .question-section {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+      }
+
+      .question-label {
+        font-size: 16px;
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 12px;
+        display: block;
+      }
+
+      .question-input {
+        width: 100%;
+        min-height: 120px;
+        padding: 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 15px;
+        font-family: inherit;
+        resize: vertical;
+        transition: border-color 0.2s ease;
+        line-height: 1.5;
+      }
+
+      .question-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .chat-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 500px;
+      }
+
+      .chat-header {
+        padding: 20px;
+        border-bottom: 1px solid #e2e8f0;
+        background: #f8fafc;
+        border-radius: 12px 12px 0 0;
+      }
+
+      .chat-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 4px;
+      }
+
+      .chat-subtitle {
+        font-size: 14px;
+        color: #64748b;
+      }
+
+      .chat-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        scroll-behavior: smooth;
+      }
+
+      .message {
+        display: flex;
+        gap: 12px;
+        animation: messageSlide 0.3s ease-out;
+      }
+
+      @keyframes messageSlide {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.user {
+        flex-direction: row-reverse;
+      }
+
+      .message-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .message.user .message-avatar {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .message.bot .message-avatar {
+        background: #10b981;
+        color: white;
+      }
+
+      .message-content {
+        max-width: 70%;
+        padding: 12px 16px;
+        border-radius: 18px;
+        font-size: 15px;
+        line-height: 1.4;
+        word-wrap: break-word;
+      }
+
+      .message.user .message-content {
+        background: #3b82f6;
+        color: white;
+        border-bottom-right-radius: 4px;
+      }
+
+      .message.bot .message-content {
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+        border-bottom-left-radius: 4px;
+      }
+
+      .chat-input-container {
+        padding: 20px;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+        border-radius: 0 0 12px 12px;
+      }
+
+      .chat-input-wrapper {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+      }
+
+      .chat-input {
+        flex: 1;
+        min-height: 44px;
+        max-height: 120px;
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 22px;
+        font-size: 15px;
+        font-family: inherit;
+        resize: none;
+        transition: all 0.2s ease;
+        line-height: 1.4;
+      }
+
+      .chat-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .send-button {
+        width: 44px;
+        height: 44px;
+        border: none;
+        background: #3b82f6;
+        color: white;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        font-size: 18px;
+        flex-shrink: 0;
+      }
+
+      .send-button:hover:not(:disabled) {
+        background: #2563eb;
+        transform: scale(1.05);
+      }
+
+      .send-button:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .typing-indicator {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        color: #64748b;
+        font-style: italic;
+        animation: messageSlide 0.3s ease-out;
+      }
+
+      .typing-dots {
+        display: flex;
+        gap: 4px;
+      }
+
+      .typing-dot {
+        width: 6px;
+        height: 6px;
+        background: #94a3b8;
+        border-radius: 50%;
+        animation: typingPulse 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typingPulse {
+        0%,
+        60%,
+        100% {
+          opacity: 0.3;
+        }
+        30% {
+          opacity: 1;
+        }
+      }
+
+      .empty-state {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #64748b;
+        text-align: center;
+      }
+
+      .empty-state-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      .empty-state-text {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+
+      .empty-state-subtext {
+        font-size: 14px;
+        opacity: 0.7;
+      }
+
+      /* Scrollbar Styling */
+      .chat-messages::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .chat-messages::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+
+      .chat-messages::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+
+      .chat-messages::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 768px) {
+        .container {
+          padding: 10px;
+          gap: 15px;
+        }
+
+        .question-section,
+        .chat-section {
+          padding: 15px;
+        }
+
+        .message-content {
+          max-width: 85%;
+        }
+
+        .question-input {
+          min-height: 80px;
+        }
+      }
+
+      /* Error State */
+      .error-message {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #dc2626;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-top: 12px;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Question Section -->
+      <div class="question-section">
+        <label for="question-input" class="question-label">
+          Assessment Question/Task
+        </label>
+        <textarea
+          id="question-input"
+          class="question-input"
+          placeholder="Enter the assessment question or task description here..."
+        ></textarea>
+      </div>
+
+      <!-- Chat Section -->
+      <div class="chat-section">
+        <div class="chat-header">
+          <div class="chat-title">Project Stakeholder Assistant</div>
+          <div class="chat-subtitle">
+            Ask clarifying questions to better understand the requirements
+          </div>
+        </div>
+
+        <div id="chat-messages" class="chat-messages">
+          <div class="empty-state">
+            <div class="empty-state-icon">💬</div>
+            <div class="empty-state-text">
+              Ready to help with your assessment
+            </div>
+            <div class="empty-state-subtext">
+              Ask me any questions about the project requirements
+            </div>
+          </div>
+        </div>
+
+        <div class="chat-input-container">
+          <div class="chat-input-wrapper">
+            <textarea
+              id="chat-input"
+              class="chat-input"
+              placeholder="Ask a question about the project..."
+              rows="1"
+            ></textarea>
+            <button id="send-button" class="send-button" title="Send message">
+              ➤
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      class ChatInterface {
+        constructor() {
+          this.webhookUrl = "YOUR_N8N_WEBHOOK_URL_HERE"; // Replace with your actual webhook URL
+          this.questionInput = document.getElementById("question-input");
+          this.chatMessages = document.getElementById("chat-messages");
+          this.chatInput = document.getElementById("chat-input");
+          this.sendButton = document.getElementById("send-button");
+
+          this.messages = [];
+          this.isTyping = false;
+
+          this.initializeEventListeners();
+          this.autoResizeTextarea();
+        }
+
+        initializeEventListeners() {
+          // Send button click
+          this.sendButton.addEventListener("click", () => {
+            this.sendMessage();
+          });
+
+          // Enter key in chat input
+          this.chatInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              this.sendMessage();
+            }
+          });
+
+          // Auto-resize chat input
+          this.chatInput.addEventListener("input", () => {
+            this.autoResizeTextarea();
+          });
+        }
+
+        autoResizeTextarea() {
+          const textarea = this.chatInput;
+          textarea.style.height = "auto";
+          textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
+        }
+
+        async sendMessage() {
+          const message = this.chatInput.value.trim();
+          const question = this.questionInput.value.trim();
+
+          if (!message) return;
+
+          if (!question) {
+            this.showError("Please enter an assessment question first.");
+            return;
+          }
+
+          // Clear input and disable send button
+          this.chatInput.value = "";
+          this.autoResizeTextarea();
+          this.setSendButtonState(false);
+
+          // Add user message to chat
+          this.addMessage(message, "user");
+
+          // Show typing indicator
+          this.showTypingIndicator();
+
+          try {
+            // Send API request
+            const response = await this.sendToWebhook(question, message);
+
+            // Hide typing indicator
+            this.hideTypingIndicator();
+
+            // Add bot response
+            this.addMessage(response, "bot");
+          } catch (error) {
+            console.error("API Error:", error);
+            this.hideTypingIndicator();
+            this.addMessage(
+              "Sorry, I encountered an error. Please try again.",
+              "bot"
+            );
+          }
+
+          // Re-enable send button
+          this.setSendButtonState(true);
+        }
+
+        async sendToWebhook(question, message) {
+          const payload = {
+            question: question,
+            message: message,
+            timestamp: new Date().toISOString(),
+            messageHistory: this.messages.map((msg) => ({
+              content: msg.content,
+              sender: msg.sender,
+              timestamp: msg.timestamp,
+            })),
+          };
+
+          const response = await fetch(this.webhookUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          // Assuming the webhook returns a response in a 'response' field
+          // Adjust this based on your n8n webhook response structure
+          return (
+            data.response ||
+            data.message ||
+            "Thank you for your question. Let me think about that..."
+          );
+        }
+
+        addMessage(content, sender) {
+          const timestamp = new Date().toISOString();
+          const messageData = { content, sender, timestamp };
+
+          this.messages.push(messageData);
+
+          // Clear empty state if this is the first message
+          if (this.messages.length === 1) {
+            this.clearEmptyState();
+          }
+
+          const messageElement = this.createMessageElement(messageData);
+          this.chatMessages.appendChild(messageElement);
+          this.scrollToBottom();
+        }
+
+        createMessageElement(messageData) {
+          const messageDiv = document.createElement("div");
+          messageDiv.className = `message ${messageData.sender}`;
+
+          const avatar = document.createElement("div");
+          avatar.className = "message-avatar";
+          avatar.textContent = messageData.sender === "user" ? "U" : "AI";
+
+          const content = document.createElement("div");
+          content.className = "message-content";
+          content.textContent = messageData.content;
+
+          messageDiv.appendChild(avatar);
+          messageDiv.appendChild(content);
+
+          return messageDiv;
+        }
+
+        showTypingIndicator() {
+          if (this.isTyping) return;
+
+          this.isTyping = true;
+
+          const typingDiv = document.createElement("div");
+          typingDiv.className = "typing-indicator";
+          typingDiv.id = "typing-indicator";
+
+          const avatar = document.createElement("div");
+          avatar.className = "message-avatar";
+          avatar.style.background = "#10b981";
+          avatar.style.color = "white";
+          avatar.textContent = "AI";
+
+          const typingText = document.createElement("span");
+          typingText.textContent = "Typing";
+
+          const dotsContainer = document.createElement("div");
+          dotsContainer.className = "typing-dots";
+
+          for (let i = 0; i < 3; i++) {
+            const dot = document.createElement("div");
+            dot.className = "typing-dot";
+            dotsContainer.appendChild(dot);
+          }
+
+          typingDiv.appendChild(avatar);
+          typingDiv.appendChild(typingText);
+          typingDiv.appendChild(dotsContainer);
+
+          this.chatMessages.appendChild(typingDiv);
+          this.scrollToBottom();
+        }
+
+        hideTypingIndicator() {
+          const typingIndicator = document.getElementById("typing-indicator");
+          if (typingIndicator) {
+            typingIndicator.remove();
+          }
+          this.isTyping = false;
+        }
+
+        clearEmptyState() {
+          const emptyState = this.chatMessages.querySelector(".empty-state");
+          if (emptyState) {
+            emptyState.remove();
+          }
+        }
+
+        scrollToBottom() {
+          this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        }
+
+        setSendButtonState(enabled) {
+          this.sendButton.disabled = !enabled;
+        }
+
+        showError(message) {
+          // Remove existing error messages
+          const existingError = document.querySelector(".error-message");
+          if (existingError) {
+            existingError.remove();
+          }
+
+          const errorDiv = document.createElement("div");
+          errorDiv.className = "error-message";
+          errorDiv.textContent = message;
+
+          this.questionInput.parentElement.appendChild(errorDiv);
+
+          // Auto-remove error after 5 seconds
+          setTimeout(() => {
+            errorDiv.remove();
+          }, 5000);
+        }
+      }
+
+      // Initialize the chat interface when the DOM is loaded
+      document.addEventListener("DOMContentLoaded", () => {
+        new ChatInterface();
+      });
+    </script>
+  </body>
+</html>
