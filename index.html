@@ -14,14 +14,14 @@
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
           sans-serif;
-        background-color: #f8fafc;
+        background-color: #f3e8ff;
         height: 100vh;
         display: flex;
         flex-direction: column;
       }
 
       .container {
-        max-width: 1200px;
+        max-width: 1400px;
         margin: 0 auto;
         height: 100vh;
         display: flex;
@@ -161,6 +161,16 @@
         background: #3b82f6;
         color: white;
         border-bottom-right-radius: 4px;
+      }
+
+      .message.bot .message-content.error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #dc2626;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-top: 12px;
+        font-size: 14px;
       }
 
       .message.bot .message-content {
@@ -335,6 +345,11 @@
         .question-input {
           min-height: 80px;
         }
+
+        .download-button {
+          bottom: 10px;
+          right: 10px;
+        }
       }
 
       /* Error State */
@@ -347,6 +362,30 @@
         margin-top: 12px;
         font-size: 14px;
       }
+
+      .download-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 25px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+      }
+
+      .download-button:hover {
+        background: #2563eb;
+        transform: scale(1.05);
+      }
     </style>
   </head>
   <body>
@@ -354,12 +393,12 @@
       <!-- Question Section -->
       <div class="question-section">
         <label for="question-input" class="question-label">
-          Assessment Question/Task
+          Assessment Task
         </label>
         <textarea
           id="question-input"
           class="question-input"
-          placeholder="Enter the assessment question or task description here..."
+          placeholder="Enter the assessment question or task here..."
         ></textarea>
       </div>
 
@@ -400,20 +439,33 @@
       </div>
     </div>
 
+    <button
+      class="download-button"
+      title="Download conversation"
+      onclick="window.chatInterface.downloadConversation()"
+    >
+      ⬇️
+    </button>
+
     <script>
       class ChatInterface {
         constructor() {
-          this.webhookUrl = "YOUR_N8N_WEBHOOK_URL_HERE"; // Replace with your actual webhook URL
+          this.webhookUrl =
+            "https://nishant-calyptus.app.n8n.cloud/webhook/cab686a2-ce2f-4a98-a925-30413dede636"; // Updated webhook URL
           this.questionInput = document.getElementById("question-input");
           this.chatMessages = document.getElementById("chat-messages");
           this.chatInput = document.getElementById("chat-input");
           this.sendButton = document.getElementById("send-button");
+          this.sessionId = crypto.randomUUID(); // Generate unique session ID
 
           this.messages = [];
           this.isTyping = false;
 
           this.initializeEventListeners();
           this.autoResizeTextarea();
+
+          // Make the instance globally accessible for the download button
+          window.chatInterface = this;
         }
 
         initializeEventListeners() {
@@ -477,7 +529,10 @@
             console.error("API Error:", error);
             this.hideTypingIndicator();
             this.addMessage(
-              "Sorry, I encountered an error. Please try again.",
+              `Error: ${
+                error.message ||
+                "Failed to connect to the server. Please check your connection and try again."
+              }`,
               "bot"
             );
           }
@@ -488,37 +543,58 @@
 
         async sendToWebhook(question, message) {
           const payload = {
-            question: question,
-            message: message,
+            text: message,
+            task: question,
             timestamp: new Date().toISOString(),
-            messageHistory: this.messages.map((msg) => ({
-              content: msg.content,
-              sender: msg.sender,
-              timestamp: msg.timestamp,
-            })),
+            sessionId: this.sessionId,
           };
 
-          const response = await fetch(this.webhookUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          });
+          try {
+            console.log("Sending webhook request:", {
+              url: this.webhookUrl,
+              payload: payload,
+            });
 
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const response = await fetch(this.webhookUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                Referer: window.location.href,
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "cross-site",
+              },
+              mode: "cors",
+              body: JSON.stringify(payload),
+            });
+
+            console.log("Webhook response status:", response.status);
+            const responseText = await response.text();
+            console.log("Webhook response text:", responseText);
+
+            if (!response.ok) {
+              throw new Error(
+                `HTTP error! status: ${response.status} - ${responseText}`
+              );
+            }
+
+            try {
+              const data = JSON.parse(responseText);
+              return (
+                data.response ||
+                data.message ||
+                data.text ||
+                responseText ||
+                "No response received"
+              );
+            } catch (parseError) {
+              console.error("JSON parse error:", parseError);
+              return responseText || "Received non-JSON response from server";
+            }
+          } catch (error) {
+            console.error("Webhook Error:", error);
+            throw new Error(`Connection failed: ${error.message}`);
           }
-
-          const data = await response.json();
-
-          // Assuming the webhook returns a response in a 'response' field
-          // Adjust this based on your n8n webhook response structure
-          return (
-            data.response ||
-            data.message ||
-            "Thank you for your question. Let me think about that..."
-          );
         }
 
         addMessage(content, sender) {
@@ -547,7 +623,22 @@
 
           const content = document.createElement("div");
           content.className = "message-content";
-          content.textContent = messageData.content;
+          if (
+            messageData.sender === "bot" &&
+            messageData.content.startsWith("Error:")
+          ) {
+            content.className += " error";
+          }
+          
+          // Convert newlines to <br> tags and preserve whitespace
+          content.style.whiteSpace = "pre-wrap";
+          content.innerHTML = messageData.content
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;")
+            .replace(/\n/g, "<br>");
 
           messageDiv.appendChild(avatar);
           messageDiv.appendChild(content);
@@ -630,6 +721,31 @@
           setTimeout(() => {
             errorDiv.remove();
           }, 5000);
+        }
+
+        downloadConversation() {
+          if (this.messages.length === 0) {
+            this.showError("No messages to download");
+            return;
+          }
+
+          const question = this.questionInput.value.trim();
+          let markdown = `# Assessment Task\n\n${question || "No task specified"}\n\n## Conversation\n\n`;
+
+          this.messages.forEach((msg) => {
+            const sender = msg.sender === "user" ? "User" : "Assistant";
+            markdown += `### ${sender}\n\n${msg.content}\n\n`;
+          });
+
+          const blob = new Blob([markdown], { type: "text/markdown" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `conversation-${this.sessionId}.md`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
         }
       }
 
